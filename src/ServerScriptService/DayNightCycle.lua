@@ -23,7 +23,12 @@ local DayNightCycle = {}
 DayNightCycle.NightStarted = Instance.new("BindableEvent")
 DayNightCycle.DayStarted = Instance.new("BindableEvent")
 
-DayNightCycle.CurrentNight = WorldStateStore.LoadNight()
+-- Loaded from DataStore in the background once Start() runs (see below)
+-- -- never blocking here at require-time, since a slow/throttled
+-- DataStore call (common in Studio Play-Solo testing) would otherwise
+-- stall this require() and, with it, the rest of Main.server.lua's boot
+-- sequence -- including world generation and gathering.
+DayNightCycle.CurrentNight = 0
 DayNightCycle.Phase = "Day" -- "Day" | "Night"
 DayNightCycle.GameComplete = false
 
@@ -114,6 +119,11 @@ end
 
 function DayNightCycle.Start()
 	task.spawn(function()
+		-- Yields here (DataStore round-trip), not at module require-time,
+		-- so a slow/failed load only delays this loop -- never the rest
+		-- of the server's boot sequence.
+		DayNightCycle.CurrentNight = math.max(DayNightCycle.CurrentNight, WorldStateStore.LoadNight())
+
 		while true do
 			runDayPhase()
 

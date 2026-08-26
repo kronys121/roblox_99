@@ -15,7 +15,12 @@ local Warehouse = {}
 
 local SAVE_INTERVAL = 10
 
-local resources = WorldStateStore.LoadWarehouse()
+-- Starts empty (not loaded from DataStore here) so requiring this module
+-- never yields -- a slow/throttled DataStore call at require-time would
+-- otherwise stall the rest of Main.server.lua's boot sequence, including
+-- world generation and gathering. The real save is fetched in the
+-- background by Init() instead.
+local resources = { Wood = 0, Stone = 0, Berries = 0, Water = 0, RareMaterial = 0 }
 local buildables = { Campfire = 0, WoodWall = 0, WoodDoor = 0, SpikeTrap = 0, WatchTower = 0, ReinforcedWall = 0 }
 local dirty = false
 
@@ -30,6 +35,16 @@ end
 function Warehouse.Init()
 	broadcastResources()
 	broadcastBuildables()
+
+	task.spawn(function()
+		local loaded = WorldStateStore.LoadWarehouse()
+		-- Add rather than overwrite: a deposit made by a player in the
+		-- brief window before this resolves must not be clobbered.
+		for name, amount in pairs(loaded) do
+			resources[name] = (resources[name] or 0) + amount
+		end
+		broadcastResources()
+	end)
 
 	task.spawn(function()
 		while true do

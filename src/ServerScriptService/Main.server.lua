@@ -49,7 +49,10 @@ DayNightCycle.NightStarted.Event:Connect(function(nightNumber)
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		PlayerDataManager.ReportNight(player, nightNumber)
-		LeaderboardService.ReportScore(player, nightNumber)
+		-- Backgrounded: an OrderedDataStore write here would otherwise
+		-- delay the night-cycle loop (and every other player's reward/
+		-- notification) by however long that DataStore call takes.
+		task.spawn(LeaderboardService.ReportScore, player, nightNumber)
 		PlayerDataManager.AddCurrency(player, reward)
 		Notify:FireClient(player, message)
 	end

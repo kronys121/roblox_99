@@ -81,28 +81,43 @@ local function ensureLeaderstats(player, data)
 end
 
 function PlayerDataManager.Load(player)
+	-- Data exists with defaults the instant the player joins -- gathering,
+	-- crafting, etc. all work immediately -- rather than waiting on the
+	-- DataStore round-trip below, which can be slow or throttled
+	-- (especially in Studio Play Solo testing). The real save, if any,
+	-- merges in whenever it arrives.
 	local data = defaultData()
-
-	local ok, result = pcall(function()
-		return store:GetAsync("Player_" .. player.UserId)
-	end)
-
-	if ok and type(result) == "table" then
-		for _, name in ipairs(RESOURCE_NAMES) do
-			data[name] = result[name] or 0
-		end
-		data.BestNight = result.BestNight or 0
-		data.Currency = result.Currency or 0
-		data.OwnedCosmetics = result.OwnedCosmetics or {}
-		data.ActiveCosmetic = result.ActiveCosmetic
-	elseif not ok then
-		warn(("PlayerDataManager: failed to load data for %s: %s"):format(player.Name, tostring(result)))
-	end
-
 	dataByPlayer[player] = data
 	ensureLeaderstats(player, data)
 	pushInventory(player)
 	pushCurrency(player)
+
+	task.spawn(function()
+		local ok, result = pcall(function()
+			return store:GetAsync("Player_" .. player.UserId)
+		end)
+
+		-- The player may have already left (or never really had this
+		-- table, if two loads somehow raced) by the time this resolves.
+		if dataByPlayer[player] ~= data then
+			return
+		end
+
+		if ok and type(result) == "table" then
+			for _, name in ipairs(RESOURCE_NAMES) do
+				data[name] = result[name] or data[name]
+			end
+			data.BestNight = result.BestNight or data.BestNight
+			data.Currency = result.Currency or data.Currency
+			data.OwnedCosmetics = result.OwnedCosmetics or data.OwnedCosmetics
+			data.ActiveCosmetic = result.ActiveCosmetic
+			ensureLeaderstats(player, data)
+			pushInventory(player)
+			pushCurrency(player)
+		elseif not ok then
+			warn(("PlayerDataManager: failed to load data for %s: %s"):format(player.Name, tostring(result)))
+		end
+	end)
 end
 
 function PlayerDataManager.Save(player)
