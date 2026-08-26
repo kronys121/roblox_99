@@ -34,10 +34,7 @@
     },
 
     "Workspace": {
-      "$className": "Workspace",
-      "$properties": {
-        "FilteringEnabled": true
-      }
+      "$className": "Workspace"
     },
 
     "Lighting": {
@@ -45,8 +42,8 @@
       "$properties": {
         "ClockTime": 8,
         "GeographicLatitude": 0,
-        "Ambient": [0.2, 0.2, 0.25],
-        "OutdoorAmbient": [0.35, 0.35, 0.4],
+        "Ambient": { "Color3": [0.2, 0.2, 0.25] },
+        "OutdoorAmbient": { "Color3": [0.35, 0.35, 0.4] },
         "Brightness": 2,
         "FogEnd": 800
       }
