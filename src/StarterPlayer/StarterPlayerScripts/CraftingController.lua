@@ -44,7 +44,7 @@ local function sortedRecipes()
 	return entries
 end
 
-function CraftingController.Init(hud, onBuildableCrafted)
+function CraftingController.Init(hud, closeOtherMenus)
 	local screenGui = hud.ScreenGui
 
 	local menu = Instance.new("Frame")
@@ -147,17 +147,21 @@ function CraftingController.Init(hud, onBuildableCrafted)
 			craftButton.Text = "Craft"
 			if ok then
 				hud.ShowToast("Crafted " .. itemName)
-				if recipe.Kind == "Buildable" and onBuildableCrafted then
-					onBuildableCrafted(itemName)
-				end
 			else
 				hud.ShowToast(resultOrError or "Cannot craft")
 			end
 		end)
 	end
 
+	local function setVisible(visible)
+		if visible and closeOtherMenus then
+			closeOtherMenus()
+		end
+		menu.Visible = visible
+	end
+
 	local function toggle()
-		menu.Visible = not menu.Visible
+		setVisible(not menu.Visible)
 	end
 
 	UserInputService.InputBegan:Connect(function(input, processed)
@@ -169,7 +173,7 @@ function CraftingController.Init(hud, onBuildableCrafted)
 		end
 	end)
 
-	return { Menu = menu, Toggle = toggle }
+	return { Menu = menu, Toggle = toggle, SetVisible = setVisible }
 end
 
 return CraftingController

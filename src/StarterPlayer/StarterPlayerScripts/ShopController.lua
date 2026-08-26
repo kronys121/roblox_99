@@ -16,7 +16,7 @@ local player = Players.LocalPlayer
 
 local ShopController = {}
 
-function ShopController.Init(hud)
+function ShopController.Init(hud, closeOtherMenus)
 	local screenGui = hud.ScreenGui
 	local ownedCosmetics = {}
 	local activeCosmetic = nil
@@ -238,8 +238,15 @@ function ShopController.Init(hud)
 		refreshCosmeticButtons()
 	end)
 
+	local function setVisible(visible)
+		if visible and closeOtherMenus then
+			closeOtherMenus()
+		end
+		menu.Visible = visible
+	end
+
 	local function toggle()
-		menu.Visible = not menu.Visible
+		setVisible(not menu.Visible)
 	end
 
 	UserInputService.InputBegan:Connect(function(input, processed)
@@ -251,7 +258,7 @@ function ShopController.Init(hud)
 		end
 	end)
 
-	return { Menu = menu, Toggle = toggle }
+	return { Menu = menu, Toggle = toggle, SetVisible = setVisible }
 end
 
 return ShopController

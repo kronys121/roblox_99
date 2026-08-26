@@ -1,19 +1,22 @@
--- An always-visible row of buttons for Craft/Build/Shop/Ranks, so every
--- menu is reachable by clicking instead of needing to already know its
--- hotkey. Each button just calls the same Toggle() the hotkey calls.
--- Placed top-center, just under the night/currency labels, to stay clear
--- of the menus themselves (which dock left/right/bottom-center).
+-- An always-visible row of buttons for Craft/Build/Inventory/Shop/Ranks,
+-- so every menu is reachable by clicking instead of needing to already
+-- know its hotkey. Each button just calls the same Toggle() the hotkey
+-- calls. Placed top-center, just under the night/currency labels, to
+-- stay clear of the menus themselves (which dock left/right/center).
+--
+-- Handlers passed to Init() must be in the same order as BUTTONS below.
 
 local ActionBarController = {}
 
 local BUTTONS = {
 	{ Label = "Craft (C)", Color = Color3.fromRGB(70, 130, 80) },
 	{ Label = "Build (B)", Color = Color3.fromRGB(80, 110, 150) },
+	{ Label = "Inventory (I)", Color = Color3.fromRGB(150, 130, 60) },
 	{ Label = "Shop (V)", Color = Color3.fromRGB(150, 110, 40) },
 	{ Label = "Ranks (L)", Color = Color3.fromRGB(120, 90, 150) },
 }
 
-local BUTTON_WIDTH = 110
+local BUTTON_WIDTH = 100
 local BUTTON_HEIGHT = 40
 local GAP = 8
 
@@ -42,7 +45,7 @@ function ActionBarController.Init(hud, handlers)
 		button.LayoutOrder = i
 		button.BackgroundColor3 = info.Color
 		button.Font = Enum.Font.GothamBold
-		button.TextSize = 14
+		button.TextSize = 12
 		button.TextColor3 = Color3.fromRGB(255, 255, 255)
 		button.Text = info.Label
 		button.Parent = bar

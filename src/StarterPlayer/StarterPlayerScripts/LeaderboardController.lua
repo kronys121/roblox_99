@@ -8,7 +8,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local LeaderboardController = {}
 
-function LeaderboardController.Init(hud)
+function LeaderboardController.Init(hud, closeOtherMenus)
 	local screenGui = hud.ScreenGui
 
 	local menu = Instance.new("Frame")
@@ -87,11 +87,18 @@ function LeaderboardController.Init(hud)
 		end)
 	end
 
-	local function toggle()
-		menu.Visible = not menu.Visible
-		if menu.Visible then
+	local function setVisible(visible)
+		if visible then
+			if closeOtherMenus then
+				closeOtherMenus()
+			end
 			refresh()
 		end
+		menu.Visible = visible
+	end
+
+	local function toggle()
+		setVisible(not menu.Visible)
 	end
 
 	UserInputService.InputBegan:Connect(function(input, processed)
@@ -103,7 +110,7 @@ function LeaderboardController.Init(hud)
 		end
 	end)
 
-	return { Menu = menu, Toggle = toggle }
+	return { Menu = menu, Toggle = toggle, SetVisible = setVisible }
 end
 
 return LeaderboardController

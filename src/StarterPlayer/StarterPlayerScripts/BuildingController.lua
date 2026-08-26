@@ -36,7 +36,7 @@ local function snapToGrid(position)
 	)
 end
 
-function BuildingController.Init(hud)
+function BuildingController.Init(hud, closeOtherMenus)
 	local owned = {}
 	for _, name in ipairs(BUILDABLE_ORDER) do
 		owned[name] = 0
@@ -76,6 +76,9 @@ function BuildingController.Init(hud)
 	end
 
 	local function setBuildMode(active)
+		if active and closeOtherMenus then
+			closeOtherMenus()
+		end
 		buildModeActive = active
 		if active and owned[currentItem()] and owned[currentItem()] > 0 then
 			createGhost(currentItem())
@@ -133,6 +136,7 @@ function BuildingController.Init(hud)
 		Toggle = function()
 			setBuildMode(not buildModeActive)
 		end,
+		SetVisible = setBuildMode,
 	}
 end
 
