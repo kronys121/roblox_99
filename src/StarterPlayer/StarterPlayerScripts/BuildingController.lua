@@ -128,6 +128,12 @@ function BuildingController.Init(hud)
 			ghost.CFrame = CFrame.new(snapped + Vector3.new(0, size.Y / 2, 0))
 		end
 	end)
+
+	return {
+		Toggle = function()
+			setBuildMode(not buildModeActive)
+		end,
+	}
 end
 
 return BuildingController

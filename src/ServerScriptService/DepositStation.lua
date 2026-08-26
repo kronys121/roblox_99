@@ -15,31 +15,41 @@ local RESOURCE_NAMES = { "Wood", "Stone", "Berries", "Water", "RareMaterial" }
 local DepositStation = {}
 
 function DepositStation.Start()
-	local warehouseFolder = Workspace:WaitForChild("Warehouse")
-	local chest = warehouseFolder:WaitForChild("Chest")
-	local prompt = chest:WaitForChild("ProximityPrompt")
+	-- Runs in the background: if the Warehouse chest is ever missing
+	-- (e.g. WorldGenerator failed), this waits forever rather than
+	-- erroring, and must not block the rest of Main.server.lua's startup.
+	task.spawn(function()
+		local warehouseFolder = Workspace:WaitForChild("Warehouse", 10)
+		local chest = warehouseFolder and warehouseFolder:WaitForChild("Chest", 10)
+		local prompt = chest and chest:WaitForChild("ProximityPrompt", 10)
 
-	prompt.Triggered:Connect(function(player)
-		local data = PlayerDataManager.Get(player)
-		if not data then
+		if not prompt then
+			warn("DepositStation: Warehouse chest/prompt never appeared; deposits are disabled.")
 			return
 		end
 
-		local depositedAny = false
-		for _, name in ipairs(RESOURCE_NAMES) do
-			local amount = data[name] or 0
-			if amount > 0 then
-				Warehouse.AddResource(name, amount)
-				PlayerDataManager.SpendResources(player, { [name] = amount })
-				depositedAny = true
+		prompt.Triggered:Connect(function(player)
+			local data = PlayerDataManager.Get(player)
+			if not data then
+				return
 			end
-		end
 
-		if depositedAny then
-			Notify:FireClient(player, "Deposited your resources into the Warehouse.")
-		else
-			Notify:FireClient(player, "You have nothing to deposit.")
-		end
+			local depositedAny = false
+			for _, name in ipairs(RESOURCE_NAMES) do
+				local amount = data[name] or 0
+				if amount > 0 then
+					Warehouse.AddResource(name, amount)
+					PlayerDataManager.SpendResources(player, { [name] = amount })
+					depositedAny = true
+				end
+			end
+
+			if depositedAny then
+				Notify:FireClient(player, "Deposited your resources into the Warehouse.")
+			else
+				Notify:FireClient(player, "You have nothing to deposit.")
+			end
+		end)
 	end)
 end
 

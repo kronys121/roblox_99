@@ -20,23 +20,25 @@ DayNightConfig.DuskClockTime = 19
 
 -- Lighting/atmosphere presets. Day is crossfaded in at the start of each
 -- day phase (from the previous Night preset); Night is crossfaded in at
--- the start of each night phase (from the previous Day preset).
+-- the start of each night phase (from the previous Day preset). Tuned
+-- for a dim, misty survival-horror forest rather than a bright, clear
+-- sunny day -- even daytime stays a little overcast and close-fogged.
 DayNightConfig.Lighting = {
 	Day = {
-		Ambient = Color3.fromRGB(90, 90, 100),
-		OutdoorAmbient = Color3.fromRGB(150, 150, 160),
-		Brightness = 3,
-		FogColor = Color3.fromRGB(170, 190, 200),
-		FogEnd = 1200,
-		Tint = Color3.fromRGB(255, 255, 255),
+		Ambient = Color3.fromRGB(60, 65, 60),
+		OutdoorAmbient = Color3.fromRGB(105, 110, 100),
+		Brightness = 1.8,
+		FogColor = Color3.fromRGB(130, 140, 125),
+		FogEnd = 550,
+		Tint = Color3.fromRGB(235, 240, 230),
 	},
 	Night = {
-		Ambient = Color3.fromRGB(15, 15, 25),
-		OutdoorAmbient = Color3.fromRGB(20, 20, 35),
-		Brightness = 0.75,
-		FogColor = Color3.fromRGB(5, 5, 12),
-		FogEnd = 300,
-		Tint = Color3.fromRGB(150, 170, 210),
+		Ambient = Color3.fromRGB(4, 4, 8),
+		OutdoorAmbient = Color3.fromRGB(6, 6, 12),
+		Brightness = 0.25,
+		FogColor = Color3.fromRGB(2, 2, 5),
+		FogEnd = 130,
+		Tint = Color3.fromRGB(120, 140, 190),
 	},
 }
 

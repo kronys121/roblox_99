@@ -21,6 +21,16 @@ local function newPart(props)
 	return part
 end
 
+-- Studio's default template (e.g. "Baseplate") ships with its own ground
+-- part sitting at the same height as ours. Left in place, it z-fights
+-- with our generated Ground (the "flickering floor" you get otherwise).
+local function removeDefaultBaseplate()
+	local existing = Workspace:FindFirstChild("Baseplate")
+	if existing and existing:IsA("BasePart") then
+		existing:Destroy()
+	end
+end
+
 local function buildGround()
 	local size = GameConfig.World.GroundSize
 	local ground = newPart({
@@ -263,6 +273,7 @@ local function buildWarehouse()
 end
 
 function WorldGenerator.Generate()
+	removeDefaultBaseplate()
 	buildGround()
 	buildSpawn()
 	buildWarehouse()

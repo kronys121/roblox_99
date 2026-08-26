@@ -11,12 +11,20 @@ local CraftingController = require(script.Parent:WaitForChild("CraftingControlle
 local BuildingController = require(script.Parent:WaitForChild("BuildingController"))
 local ShopController = require(script.Parent:WaitForChild("ShopController"))
 local LeaderboardController = require(script.Parent:WaitForChild("LeaderboardController"))
+local ActionBarController = require(script.Parent:WaitForChild("ActionBarController"))
 
 local hud = HUDController.Init()
-CraftingController.Init(hud)
-BuildingController.Init(hud)
-ShopController.Init(hud)
-LeaderboardController.Init(hud)
+local crafting = CraftingController.Init(hud)
+local building = BuildingController.Init(hud)
+local shop = ShopController.Init(hud)
+local leaderboard = LeaderboardController.Init(hud)
+
+ActionBarController.Init(hud, {
+	crafting.Toggle,
+	building.Toggle,
+	shop.Toggle,
+	leaderboard.Toggle,
+})
 
 local sprinting = false
 

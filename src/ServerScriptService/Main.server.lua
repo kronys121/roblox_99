@@ -20,15 +20,25 @@ local DepositStation = require(script.Parent:WaitForChild("DepositStation"))
 local LeaderboardService = require(script.Parent:WaitForChild("LeaderboardService"))
 local ShopService = require(script.Parent:WaitForChild("ShopService"))
 
-WorldGenerator.Generate()
-Warehouse.Init()
-ResourceNodes.Start()
-CraftingSystem.Start()
-BuildingSystem.Start()
-SurvivalStats.Start()
-DepositStation.Start()
-LeaderboardService.Start()
-ShopService.Start()
+-- Each system starts independently: if one throws, the rest still start
+-- instead of a single bug (e.g. in world generation) silently taking out
+-- gathering, crafting, and building along with it.
+local function safeStart(name, fn)
+	local ok, err = pcall(fn)
+	if not ok then
+		warn(("Main: %s failed to start: %s"):format(name, tostring(err)))
+	end
+end
+
+safeStart("WorldGenerator", WorldGenerator.Generate)
+safeStart("Warehouse", Warehouse.Init)
+safeStart("ResourceNodes", ResourceNodes.Start)
+safeStart("CraftingSystem", CraftingSystem.Start)
+safeStart("BuildingSystem", BuildingSystem.Start)
+safeStart("SurvivalStats", SurvivalStats.Start)
+safeStart("DepositStation", DepositStation.Start)
+safeStart("LeaderboardService", LeaderboardService.Start)
+safeStart("ShopService", ShopService.Start)
 
 DayNightCycle.NightStarted.Event:Connect(function(nightNumber)
 	EnemySpawner.OnNightStarted(nightNumber)

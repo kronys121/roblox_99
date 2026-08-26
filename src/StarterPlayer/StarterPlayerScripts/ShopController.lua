@@ -238,16 +238,20 @@ function ShopController.Init(hud)
 		refreshCosmeticButtons()
 	end)
 
+	local function toggle()
+		menu.Visible = not menu.Visible
+	end
+
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
 			return
 		end
 		if input.KeyCode == Enum.KeyCode.V then
-			menu.Visible = not menu.Visible
+			toggle()
 		end
 	end)
 
-	return menu
+	return { Menu = menu, Toggle = toggle }
 end
 
 return ShopController
