@@ -23,7 +23,7 @@ local function gatherAmountFor(player, resourceType)
 	local tool = equippedToolName(player)
 	if resourceType == "Tree" and tool == "Axe" then
 		return GameConfig.GatherAmounts.Axe
-	elseif resourceType == "Rock" and tool == "Pickaxe" then
+	elseif (resourceType == "Rock" or resourceType == "OreVein") and (tool == "Pickaxe" or tool == "SteelPickaxe") then
 		return GameConfig.GatherAmounts.Pickaxe
 	end
 	return GameConfig.GatherAmounts.BareHands

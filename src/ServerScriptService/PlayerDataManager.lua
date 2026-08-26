@@ -1,34 +1,39 @@
--- Owns all per-player persisted state: resource counts and best night
--- reached. Exposes a small API other server modules use instead of
--- touching DataStores directly.
+-- Owns per-player persisted state: personal carry (gathered resources not
+-- yet deposited at the base Warehouse), best night reached, Embers
+-- currency, and owned/active cosmetics. Shared/base-wide state (the
+-- Warehouse stockpile, the current night) lives in Warehouse.lua and
+-- WorldStateStore.lua instead.
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local InventoryUpdated = Remotes:WaitForChild("InventoryUpdated")
-local BuildablesUpdated = Remotes:WaitForChild("BuildablesUpdated")
+local CurrencyUpdated = Remotes:WaitForChild("CurrencyUpdated")
 
-local store = DataStoreService:GetDataStore("PlayerData_v1")
+local store = DataStoreService:GetDataStore("PlayerData_v2")
+
+local GamePassService = require(script.Parent:WaitForChild("GamePassService"))
 
 local PlayerDataManager = {}
-local dataByPlayer = {} -- [Player] = { Wood, Stone, Berries, BestNight, Buildables = {} }
+local dataByPlayer = {} -- [Player] = { Wood, Stone, Berries, Water, RareMaterial, BestNight, Currency, OwnedCosmetics, ActiveCosmetic }
 
-local DEFAULT_DATA = {
-	Wood = 0,
-	Stone = 0,
-	Berries = 0,
-	BestNight = 0,
-	Buildables = { Campfire = 0, WoodWall = 0 },
-}
+local RESOURCE_NAMES = { "Wood", "Stone", "Berries", "Water", "RareMaterial" }
 
-local function deepCopy(t)
-	local copy = {}
-	for k, v in pairs(t) do
-		copy[k] = (type(v) == "table") and deepCopy(v) or v
-	end
-	return copy
+local function defaultData()
+	return {
+		Wood = 0,
+		Stone = 0,
+		Berries = 0,
+		Water = 0,
+		RareMaterial = 0,
+		BestNight = 0,
+		Currency = 0,
+		OwnedCosmetics = {},
+		ActiveCosmetic = nil,
+	}
 end
 
 local function pushInventory(player)
@@ -40,15 +45,22 @@ local function pushInventory(player)
 		Wood = data.Wood,
 		Stone = data.Stone,
 		Berries = data.Berries,
+		Water = data.Water,
+		RareMaterial = data.RareMaterial,
 	})
 end
 
-local function pushBuildables(player)
+local function pushCurrency(player)
 	local data = dataByPlayer[player]
 	if not data then
 		return
 	end
-	BuildablesUpdated:FireClient(player, data.Buildables)
+	CurrencyUpdated:FireClient(player, {
+		Currency = data.Currency,
+		CurrencyName = GameConfig.Currency.Name,
+		OwnedCosmetics = data.OwnedCosmetics,
+		ActiveCosmetic = data.ActiveCosmetic,
+	})
 end
 
 local function ensureLeaderstats(player, data)
@@ -69,18 +81,20 @@ local function ensureLeaderstats(player, data)
 end
 
 function PlayerDataManager.Load(player)
-	local data = deepCopy(DEFAULT_DATA)
+	local data = defaultData()
 
 	local ok, result = pcall(function()
 		return store:GetAsync("Player_" .. player.UserId)
 	end)
 
 	if ok and type(result) == "table" then
-		data.Wood = result.Wood or 0
-		data.Stone = result.Stone or 0
-		data.Berries = result.Berries or 0
+		for _, name in ipairs(RESOURCE_NAMES) do
+			data[name] = result[name] or 0
+		end
 		data.BestNight = result.BestNight or 0
-		data.Buildables = result.Buildables or deepCopy(DEFAULT_DATA.Buildables)
+		data.Currency = result.Currency or 0
+		data.OwnedCosmetics = result.OwnedCosmetics or {}
+		data.ActiveCosmetic = result.ActiveCosmetic
 	elseif not ok then
 		warn(("PlayerDataManager: failed to load data for %s: %s"):format(player.Name, tostring(result)))
 	end
@@ -88,7 +102,7 @@ function PlayerDataManager.Load(player)
 	dataByPlayer[player] = data
 	ensureLeaderstats(player, data)
 	pushInventory(player)
-	pushBuildables(player)
+	pushCurrency(player)
 end
 
 function PlayerDataManager.Save(player)
@@ -115,12 +129,21 @@ function PlayerDataManager.Get(player)
 	return dataByPlayer[player]
 end
 
+function PlayerDataManager.CarryCap(player)
+	local cap = GameConfig.Carry.MaxPerResource
+	if GamePassService.PlayerOwnsEffect(player, "ExtraCarry") then
+		cap += GameConfig.Carry.ExtraCarryGamePassBonus
+	end
+	return cap
+end
+
 function PlayerDataManager.AddResource(player, resourceName, amount)
 	local data = dataByPlayer[player]
 	if not data or amount == 0 then
 		return
 	end
-	data[resourceName] = math.max(0, (data[resourceName] or 0) + amount)
+	local cap = amount > 0 and PlayerDataManager.CarryCap(player) or math.huge
+	data[resourceName] = math.clamp((data[resourceName] or 0) + amount, 0, cap)
 	pushInventory(player)
 end
 
@@ -149,23 +172,52 @@ function PlayerDataManager.SpendResources(player, cost)
 	return true
 end
 
-function PlayerDataManager.AddBuildable(player, itemName, amount)
+function PlayerDataManager.AddCurrency(player, amount)
+	local data = dataByPlayer[player]
+	if not data or amount == 0 then
+		return
+	end
+	data.Currency = math.max(0, data.Currency + amount)
+	pushCurrency(player)
+end
+
+function PlayerDataManager.SpendCurrency(player, amount)
+	local data = dataByPlayer[player]
+	if not data or (data.Currency or 0) < amount then
+		return false
+	end
+	data.Currency -= amount
+	pushCurrency(player)
+	return true
+end
+
+function PlayerDataManager.OwnsCosmetic(player, cosmeticId)
+	local data = dataByPlayer[player]
+	if not data then
+		return false
+	end
+	return table.find(data.OwnedCosmetics, cosmeticId) ~= nil
+end
+
+function PlayerDataManager.GrantCosmetic(player, cosmeticId)
+	local data = dataByPlayer[player]
+	if not data or PlayerDataManager.OwnsCosmetic(player, cosmeticId) then
+		return
+	end
+	table.insert(data.OwnedCosmetics, cosmeticId)
+	pushCurrency(player)
+end
+
+function PlayerDataManager.SetActiveCosmetic(player, cosmeticId)
 	local data = dataByPlayer[player]
 	if not data then
 		return
 	end
-	data.Buildables[itemName] = (data.Buildables[itemName] or 0) + amount
-	pushBuildables(player)
-end
-
-function PlayerDataManager.ConsumeBuildable(player, itemName)
-	local data = dataByPlayer[player]
-	if not data or (data.Buildables[itemName] or 0) <= 0 then
-		return false
+	if cosmeticId ~= nil and not PlayerDataManager.OwnsCosmetic(player, cosmeticId) then
+		return
 	end
-	data.Buildables[itemName] -= 1
-	pushBuildables(player)
-	return true
+	data.ActiveCosmetic = cosmeticId
+	pushCurrency(player)
 end
 
 function PlayerDataManager.ReportNight(player, night)

@@ -1,6 +1,7 @@
--- Crafting menu: toggled with "C", lists every recipe in GameConfig with
--- its cost and lets the player attempt to craft it. Also tracks the
--- player's Buildable counts so BuildingController knows what it can place.
+-- Crafting menu: toggled with "C", lists every recipe in GameConfig
+-- (grouped by tier) with its cost, prerequisite, and craft time, and
+-- lets the player attempt to craft it. Everything is spent from the
+-- shared base Warehouse, validated server-side.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -18,6 +19,31 @@ local function costText(cost)
 	return table.concat(parts, ", ")
 end
 
+local function detailText(recipe)
+	local details = { "Tier " .. recipe.Tier }
+	if recipe.Requires then
+		table.insert(details, "needs " .. recipe.Requires)
+	end
+	if recipe.CraftTime and recipe.CraftTime > 0 then
+		table.insert(details, recipe.CraftTime .. "s")
+	end
+	return table.concat(details, " - ")
+end
+
+local function sortedRecipes()
+	local entries = {}
+	for itemName, recipe in pairs(GameConfig.Recipes) do
+		table.insert(entries, { Name = itemName, Recipe = recipe })
+	end
+	table.sort(entries, function(a, b)
+		if a.Recipe.Tier ~= b.Recipe.Tier then
+			return a.Recipe.Tier < b.Recipe.Tier
+		end
+		return a.Name < b.Name
+	end)
+	return entries
+end
+
 function CraftingController.Init(hud, onBuildableCrafted)
 	local screenGui = hud.ScreenGui
 
@@ -25,7 +51,7 @@ function CraftingController.Init(hud, onBuildableCrafted)
 	menu.Name = "CraftingMenu"
 	menu.AnchorPoint = Vector2.new(1, 0.5)
 	menu.Position = UDim2.new(1, -20, 0.5, 0)
-	menu.Size = UDim2.new(0, 260, 0, 260)
+	menu.Size = UDim2.new(0, 280, 0, 440)
 	menu.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 	menu.BackgroundTransparency = 0.15
 	menu.Visible = false
@@ -48,20 +74,22 @@ function CraftingController.Init(hud, onBuildableCrafted)
 	layout.Padding = UDim.new(0, 6)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-	local list = Instance.new("Frame")
+	local list = Instance.new("ScrollingFrame")
 	list.BackgroundTransparency = 1
 	list.Position = UDim2.new(0, 10, 0, 36)
 	list.Size = UDim2.new(1, -20, 1, -46)
+	list.CanvasSize = UDim2.new(0, 0, 0, 0)
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.ScrollBarThickness = 6
 	list.Parent = menu
 	layout.Parent = list
 
-	local order = 0
-	for itemName, recipe in pairs(GameConfig.Recipes) do
-		order += 1
+	for order, entry in ipairs(sortedRecipes()) do
+		local itemName, recipe = entry.Name, entry.Recipe
 
 		local row = Instance.new("Frame")
 		row.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
-		row.Size = UDim2.new(1, 0, 0, 46)
+		row.Size = UDim2.new(1, 0, 0, 58)
 		row.LayoutOrder = order
 		row.Parent = list
 
@@ -80,9 +108,20 @@ function CraftingController.Init(hud, onBuildableCrafted)
 		nameLabel.Text = itemName
 		nameLabel.Parent = row
 
+		local detailLabel = Instance.new("TextLabel")
+		detailLabel.BackgroundTransparency = 1
+		detailLabel.Position = UDim2.new(0, 8, 0, 21)
+		detailLabel.Size = UDim2.new(1, -70, 0, 16)
+		detailLabel.Font = Enum.Font.Gotham
+		detailLabel.TextSize = 11
+		detailLabel.TextXAlignment = Enum.TextXAlignment.Left
+		detailLabel.TextColor3 = Color3.fromRGB(160, 200, 255)
+		detailLabel.Text = detailText(recipe)
+		detailLabel.Parent = row
+
 		local costLabel = Instance.new("TextLabel")
 		costLabel.BackgroundTransparency = 1
-		costLabel.Position = UDim2.new(0, 8, 0, 22)
+		costLabel.Position = UDim2.new(0, 8, 0, 37)
 		costLabel.Size = UDim2.new(1, -70, 0, 18)
 		costLabel.Font = Enum.Font.Gotham
 		costLabel.TextSize = 12
@@ -103,7 +142,9 @@ function CraftingController.Init(hud, onBuildableCrafted)
 		craftButton.Parent = row
 
 		craftButton.MouseButton1Click:Connect(function()
+			craftButton.Text = "..."
 			local ok, resultOrError = Remotes.CraftItem:InvokeServer(itemName)
+			craftButton.Text = "Craft"
 			if ok then
 				hud.ShowToast("Crafted " .. itemName)
 				if recipe.Kind == "Buildable" and onBuildableCrafted then

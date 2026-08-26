@@ -1,6 +1,8 @@
--- Per-player Hunger and Stamina simulation. Hunger drains constantly and
--- damages the player when empty; Stamina drains while sprinting (client
--- reports sprint state) and regenerates otherwise.
+-- Per-player Health/Hunger/Thirst/Stamina simulation. Hunger and Thirst
+-- drain constantly and damage the player when empty; Stamina drains
+-- while sprinting (client reports sprint state) and regenerates
+-- otherwise. Health is the character's own Humanoid.Health, just synced
+-- into the same StatsUpdated payload the HUD already listens to.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,20 +13,29 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local StatsUpdated = Remotes:WaitForChild("StatsUpdated")
 local SetSprinting = Remotes:WaitForChild("SetSprinting")
 local EatFood = Remotes:WaitForChild("EatFood")
+local DrinkWater = Remotes:WaitForChild("DrinkWater")
 local Notify = Remotes:WaitForChild("Notify")
 
 local PlayerDataManager = require(script.Parent:WaitForChild("PlayerDataManager"))
 
 local SurvivalStats = {}
 
-local statsByPlayer = {} -- [Player] = { Hunger, Stamina, Sprinting }
+local statsByPlayer = {} -- [Player] = { Hunger, Thirst, Stamina, Sprinting }
 
 local function pushStats(player)
 	local stats = statsByPlayer[player]
-	if not stats then
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not stats or not humanoid then
 		return
 	end
-	StatsUpdated:FireClient(player, { Hunger = stats.Hunger, Stamina = stats.Stamina })
+	StatsUpdated:FireClient(player, {
+		Health = humanoid.Health,
+		MaxHealth = humanoid.MaxHealth,
+		Hunger = stats.Hunger,
+		Thirst = stats.Thirst,
+		Stamina = stats.Stamina,
+	})
 end
 
 local function applySpeed(player, sprinting)
@@ -39,13 +50,17 @@ end
 function SurvivalStats.OnCharacterAdded(player, character)
 	statsByPlayer[player] = {
 		Hunger = GameConfig.Hunger.Max,
+		Thirst = GameConfig.Thirst.Max,
 		Stamina = GameConfig.Stamina.Max,
 		Sprinting = false,
 	}
-	pushStats(player)
 
 	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.MaxHealth = GameConfig.Health.Max
+	humanoid.Health = GameConfig.Health.Max
 	humanoid.WalkSpeed = GameConfig.Stamina.WalkSpeed
+
+	pushStats(player)
 
 	humanoid.Died:Connect(function()
 		Notify:FireClient(player, "You died. Respawning...")
@@ -77,6 +92,17 @@ function SurvivalStats.Start()
 		end
 	end)
 
+	DrinkWater.OnServerEvent:Connect(function(player)
+		local stats = statsByPlayer[player]
+		if not stats then
+			return
+		end
+		if PlayerDataManager.SpendResources(player, { Water = 1 }) then
+			stats.Thirst = math.min(GameConfig.Thirst.Max, stats.Thirst + GameConfig.Thirst.WaterRestore)
+			pushStats(player)
+		end
+	end)
+
 	local sinceLastPush = 0
 	local PUSH_INTERVAL = 0.25
 
@@ -96,7 +122,12 @@ function SurvivalStats.Start()
 
 			stats.Hunger = math.max(0, stats.Hunger - GameConfig.Hunger.DrainPerSecond * dt)
 			if stats.Hunger <= 0 then
-				humanoid:TakeDamage(GameConfig.Hunger.StarvingDamagePerSecond * dt)
+				humanoid:TakeDamage(GameConfig.Hunger.DamagePerSecondWhenEmpty * dt)
+			end
+
+			stats.Thirst = math.max(0, stats.Thirst - GameConfig.Thirst.DrainPerSecond * dt)
+			if stats.Thirst <= 0 then
+				humanoid:TakeDamage(GameConfig.Thirst.DamagePerSecondWhenEmpty * dt)
 			end
 
 			if stats.Sprinting then

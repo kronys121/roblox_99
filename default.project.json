@@ -13,9 +13,15 @@
         "StatsUpdated": { "$className": "RemoteEvent" },
         "SetSprinting": { "$className": "RemoteEvent" },
         "EatFood": { "$className": "RemoteEvent" },
+        "DrinkWater": { "$className": "RemoteEvent" },
         "CraftItem": { "$className": "RemoteFunction" },
         "PlaceBuilding": { "$className": "RemoteEvent" },
         "BuildablesUpdated": { "$className": "RemoteEvent" },
+        "WarehouseUpdated": { "$className": "RemoteEvent" },
+        "GetLeaderboard": { "$className": "RemoteFunction" },
+        "BuyCosmetic": { "$className": "RemoteFunction" },
+        "SetActiveCosmetic": { "$className": "RemoteEvent" },
+        "CurrencyUpdated": { "$className": "RemoteEvent" },
         "Notify": { "$className": "RemoteEvent" }
       }
     },

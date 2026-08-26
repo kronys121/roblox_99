@@ -1,5 +1,5 @@
 -- Client entry point: wires up the HUD, crafting menu, building mode,
--- and sprint input.
+-- shop, leaderboard, and sprint input.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -9,10 +9,14 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local HUDController = require(script.Parent:WaitForChild("HUDController"))
 local CraftingController = require(script.Parent:WaitForChild("CraftingController"))
 local BuildingController = require(script.Parent:WaitForChild("BuildingController"))
+local ShopController = require(script.Parent:WaitForChild("ShopController"))
+local LeaderboardController = require(script.Parent:WaitForChild("LeaderboardController"))
 
 local hud = HUDController.Init()
 CraftingController.Init(hud)
 BuildingController.Init(hud)
+ShopController.Init(hud)
+LeaderboardController.Init(hud)
 
 local sprinting = false
 

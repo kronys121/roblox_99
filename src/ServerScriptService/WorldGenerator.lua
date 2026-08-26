@@ -168,9 +168,104 @@ local function buildBush(folder, point)
 	return model, bush
 end
 
+local function buildWaterSource(folder, point)
+	local water = newPart({
+		Name = "WaterSource",
+		Size = Vector3.new(6, 0.6, 6),
+		Position = point + Vector3.new(0, 0.3, 0),
+		Color = Color3.fromRGB(60, 130, 200),
+		Material = Enum.Material.Glass,
+		Transparency = 0.2,
+		CanCollide = false,
+	})
+
+	local model = Instance.new("Model")
+	model.Name = "WaterSource"
+	water.Parent = model
+	model.PrimaryPart = water
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Collect"
+	prompt.ObjectText = "Water"
+	prompt.HoldDuration = 0.3
+	prompt.MaxActivationDistance = 8
+	prompt.Parent = water
+
+	model:SetAttribute("ResourceType", "WaterSource")
+	model:SetAttribute("Health", GameConfig.Resources.WaterSource.Health)
+	model:SetAttribute("MaxHealth", GameConfig.Resources.WaterSource.Health)
+	CollectionService:AddTag(model, "ResourceNode")
+
+	model.Parent = folder
+	return model, water
+end
+
+local function buildOreVein(folder, point)
+	local size = Vector3.new(math.random(4, 5), math.random(2, 3), math.random(4, 5))
+	local ore = newPart({
+		Name = "OreVein",
+		Size = size,
+		Position = point + Vector3.new(0, size.Y / 2, 0),
+		Color = Color3.fromRGB(90, 130, 140),
+		Material = Enum.Material.Basalt,
+	})
+
+	local sparkle = Instance.new("PointLight")
+	sparkle.Color = Color3.fromRGB(140, 220, 230)
+	sparkle.Range = 6
+	sparkle.Brightness = 1
+	sparkle.Parent = ore
+
+	local model = Instance.new("Model")
+	model.Name = "OreVein"
+	ore.Parent = model
+	model.PrimaryPart = ore
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Mine"
+	prompt.ObjectText = "Rare Ore"
+	prompt.HoldDuration = 1
+	prompt.MaxActivationDistance = 10
+	prompt.Parent = ore
+
+	model:SetAttribute("ResourceType", "OreVein")
+	model:SetAttribute("Health", GameConfig.Resources.OreVein.Health)
+	model:SetAttribute("MaxHealth", GameConfig.Resources.OreVein.Health)
+	CollectionService:AddTag(model, "ResourceNode")
+
+	model.Parent = folder
+	return model, ore
+end
+
+local function buildWarehouse()
+	local folder = Instance.new("Folder")
+	folder.Name = "Warehouse"
+	folder.Parent = Workspace
+
+	local chest = newPart({
+		Name = "Chest",
+		Size = Vector3.new(4, 3, 3),
+		Position = Vector3.new(15, 1.5, 0),
+		Color = Color3.fromRGB(130, 95, 55),
+		Material = Enum.Material.WoodPlanks,
+	})
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "ProximityPrompt"
+	prompt.ActionText = "Deposit"
+	prompt.ObjectText = "Warehouse"
+	prompt.HoldDuration = 0.4
+	prompt.MaxActivationDistance = 10
+	prompt.Parent = chest
+
+	chest.Parent = folder
+	return folder
+end
+
 function WorldGenerator.Generate()
 	buildGround()
 	buildSpawn()
+	buildWarehouse()
 
 	local nodesFolder = Instance.new("Folder")
 	nodesFolder.Name = "ResourceNodes"
@@ -194,6 +289,20 @@ function WorldGenerator.Generate()
 		local point = randomPointOnGround(15)
 		if not isTooCloseToSpawn(point) then
 			buildBush(nodesFolder, point)
+		end
+	end
+
+	for _ = 1, GameConfig.World.WaterSourceCount do
+		local point = randomPointOnGround(15)
+		if not isTooCloseToSpawn(point) then
+			buildWaterSource(nodesFolder, point)
+		end
+	end
+
+	for _ = 1, GameConfig.World.OreVeinCount do
+		local point = randomPointOnGround(15)
+		if not isTooCloseToSpawn(point) then
+			buildOreVein(nodesFolder, point)
 		end
 	end
 

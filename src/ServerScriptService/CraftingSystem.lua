@@ -1,6 +1,9 @@
--- Validates and fulfills craft requests. Tools are inserted directly into
--- the player's Backpack; Buildables are tracked as counts in
--- PlayerDataManager and placed later via BuildingSystem.
+-- Validates and fulfills craft requests against the shared Warehouse
+-- stockpile (never personal inventory, so crafting is a cooperative
+-- action). Tools are inserted directly into the crafting player's
+-- Backpack; Buildables are added to the shared Buildable stock for
+-- anyone to place via BuildingSystem. `Requires` enforces the tool
+-- prerequisite tree (Tier 1 -> 2 -> 3 -> 4).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,7 +11,8 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CraftItem = Remotes:WaitForChild("CraftItem")
 
-local PlayerDataManager = require(script.Parent:WaitForChild("PlayerDataManager"))
+local Warehouse = require(script.Parent:WaitForChild("Warehouse"))
+local GamePassService = require(script.Parent:WaitForChild("GamePassService"))
 
 local CraftingSystem = {}
 
@@ -50,6 +54,10 @@ function CraftingSystem.Start()
 			return false, "Unknown recipe"
 		end
 
+		if recipe.Requires and not playerHasTool(player, recipe.Requires) then
+			return false, "Requires " .. recipe.Requires
+		end
+
 		if recipe.Kind == "Tool" and playerHasTool(player, itemName) then
 			return false, "Already own this tool"
 		end
@@ -58,14 +66,28 @@ function CraftingSystem.Start()
 			return false, "Cannot craft right now"
 		end
 
-		if not PlayerDataManager.SpendResources(player, recipe.Cost) then
-			return false, "Not enough resources"
+		if not Warehouse.SpendResources(recipe.Cost) then
+			return false, "Not enough resources in the Warehouse"
+		end
+
+		local craftTime = recipe.CraftTime or 0
+		if craftTime > 0 and not GamePassService.PlayerOwnsEffect(player, "FastCraft") then
+			task.wait(craftTime)
+		end
+
+		-- The player could have left mid-craft; refund the Warehouse and
+		-- bail rather than granting a tool/buildable to nobody.
+		if player.Parent == nil then
+			for resourceName, amount in pairs(recipe.Cost) do
+				Warehouse.AddResource(resourceName, amount)
+			end
+			return false, "Player left"
 		end
 
 		if recipe.Kind == "Tool" then
 			giveTool(player, itemName)
 		elseif recipe.Kind == "Buildable" then
-			PlayerDataManager.AddBuildable(player, itemName, 1)
+			Warehouse.AddBuildable(itemName, 1)
 		end
 
 		return true, itemName
