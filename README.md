@@ -16,13 +16,19 @@ default.project.json          Rojo project definition (also declares the
                                RemoteEvents/RemoteFunctions used for
                                client-server communication)
 src/ReplicatedStorage/
-  GameConfig.lua               Shared balance constants: day/night length,
-                                hunger/stamina rates, recipes, enemy stats
+  GameConfig.lua               Shared balance constants: hunger/stamina
+                                rates, recipes, enemy stats, map size
+  Configs/DayNightConfig.lua   Day/night pacing + Lighting presets
+                                (the authoritative source for time-of-day)
 src/ServerScriptService/
   Main.server.lua               Boot script, wires every system together
   WorldGenerator.lua            Builds ground, spawn, and resource nodes
-  DayNightCycle.lua             Advances time, tracks night 1-99
-  PlayerDataManager.lua         DataStore persistence + leaderstats
+  DayNightCycle.lua             Base framework: advances Lighting, tracks
+                                the current night, fires NightStarted/
+                                DayStarted for every other system to hook
+  WorldStateStore.lua           DataStore persistence for the run's
+                                current night (survives server restarts)
+  PlayerDataManager.lua         Per-player DataStore persistence + leaderstats
   SurvivalStats.lua              Hunger/stamina simulation
   ResourceNodes.lua              Gathering (trees/rocks/bushes)
   CraftingSystem.lua             Recipe validation, tool/buildable granting
@@ -34,6 +40,17 @@ src/StarterPlayer/StarterPlayerScripts/
   CraftingController.lua          Crafting menu (press C)
   BuildingController.lua          Placement/ghost preview (press B, Tab)
 ```
+
+> **Status**: this is being rebuilt incrementally into a co-op (1-8
+> player) survival-horror game per an expanded design (PathfindingService
+> enemy AI with escalating difficulty and boss nights, grid-based base
+> building with structure HP, hunger/thirst/health, a shared base
+> stockpile, meta-progression, leaderboards, Game Passes). The day/night
+> cycle above (`DayNightCycle.lua` + `DayNightConfig.lua` +
+> `WorldStateStore.lua`) is the first piece: the persisted night counter
+> and the `NightStarted`/`DayStarted` events every later system attaches
+> to. Everything else in the tree above is the previous, simpler
+> iteration and will be reworked to match as each system is built.
 
 ## Running it in Roblox Studio
 
@@ -67,10 +84,13 @@ rojo build -o "99NightsInTheForest.rbxlx"
 - **Survive the night**: forest creatures spawn at dusk and hunt nearby
   players; they despawn at dawn. Your best night reached is saved
   (leaderstat "Best Night") and persists between sessions.
-- Goal: survive all 99 nights.
+- Goal: survive all 99 nights. Day lasts 5 minutes, night lasts 3; the
+  run's current night is saved server-side, so a restarted server picks
+  up where it left off instead of resetting to Night 0.
 
 ## Tuning
 
-Every balance number (day/night length, hunger drain, recipe costs, enemy
-stats, map size/resource density) lives in
-`src/ReplicatedStorage/GameConfig.lua`.
+- Day/night pacing, transition timing, and Lighting presets:
+  `src/ReplicatedStorage/Configs/DayNightConfig.lua`.
+- Everything else (hunger drain, recipe costs, enemy stats, map size/
+  resource density): `src/ReplicatedStorage/GameConfig.lua`.

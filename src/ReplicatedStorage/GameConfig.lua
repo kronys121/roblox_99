@@ -4,10 +4,8 @@
 
 local GameConfig = {}
 
-GameConfig.TotalNights = 99
-
-GameConfig.DayLength = 240 -- seconds of daylight per cycle
-GameConfig.NightLength = 150 -- seconds of darkness per cycle
+-- Day/night pacing and total run length now live in
+-- ReplicatedStorage/Configs/DayNightConfig.lua.
 
 GameConfig.Hunger = {
 	Max = 100,

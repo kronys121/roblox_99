@@ -6,9 +6,17 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local DayNightConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("DayNightConfig"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local player = Players.LocalPlayer
+
+local function formatClock(seconds)
+	seconds = math.max(0, math.floor(seconds))
+	local minutes = math.floor(seconds / 60)
+	local secs = seconds % 60
+	return string.format("%d:%02d", minutes, secs)
+end
 
 local HUDController = {}
 
@@ -67,7 +75,7 @@ function HUDController.Init()
 	nightLabel.Font = Enum.Font.GothamBold
 	nightLabel.TextSize = 22
 	nightLabel.TextColor3 = Color3.fromRGB(255, 220, 150)
-	nightLabel.Text = "Day - Night 0 / " .. GameConfig.TotalNights
+	nightLabel.Text = "Day - Night 0 / " .. DayNightConfig.TotalNights
 	nightLabel.Parent = screenGui
 
 	local nightCorner = Instance.new("UICorner")
@@ -162,8 +170,14 @@ function HUDController.Init()
 	end
 
 	-- Remote hookups.
-	Remotes.DayNightChanged.OnClientEvent:Connect(function(phase, night, totalNights)
-		nightLabel.Text = string.format("%s - Night %d / %d", phase, night, totalNights)
+	Remotes.DayNightChanged.OnClientEvent:Connect(function(state)
+		nightLabel.Text = string.format(
+			"%s - Night %d / %d - %s",
+			state.Phase,
+			state.Night,
+			state.TotalNights,
+			formatClock(state.TimeLeft)
+		)
 	end)
 
 	Remotes.StatsUpdated.OnClientEvent:Connect(function(stats)
