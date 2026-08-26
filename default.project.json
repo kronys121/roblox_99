@@ -1,0 +1,55 @@
+{
+  "name": "99-nights-in-the-forest",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$path": "src/ReplicatedStorage",
+      "Remotes": {
+        "$className": "Folder",
+        "DayNightChanged": { "$className": "RemoteEvent" },
+        "InventoryUpdated": { "$className": "RemoteEvent" },
+        "StatsUpdated": { "$className": "RemoteEvent" },
+        "SetSprinting": { "$className": "RemoteEvent" },
+        "EatFood": { "$className": "RemoteEvent" },
+        "CraftItem": { "$className": "RemoteFunction" },
+        "PlaceBuilding": { "$className": "RemoteEvent" },
+        "BuildablesUpdated": { "$className": "RemoteEvent" },
+        "Notify": { "$className": "RemoteEvent" }
+      }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$path": "src/ServerScriptService"
+    },
+
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$path": "src/StarterPlayer/StarterPlayerScripts"
+      }
+    },
+
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "FilteringEnabled": true
+      }
+    },
+
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "ClockTime": 8,
+        "GeographicLatitude": 0,
+        "Ambient": [0.2, 0.2, 0.25],
+        "OutdoorAmbient": [0.35, 0.35, 0.4],
+        "Brightness": 2,
+        "FogEnd": 800
+      }
+    }
+  }
+}
